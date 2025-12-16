@@ -1,0 +1,329 @@
+/* =========================
+   TECH9LABS – ENTERPRISE THEME
+========================= */
+
+:root {
+  --bg: #e5e7eb;
+  --surface: #f3f4f6;
+  --card: #ffffff;
+
+  --text: #0f172a;
+  --text-soft: #374151;
+  --muted: #6b7280;
+
+  --primary: #0ea5e9;
+  --primary-dark: #0284c7;
+  --primary-soft: rgba(14,165,233,.15);
+
+  --border: rgba(148,163,184,.45);
+  --radius: 14px;
+  --radius-sm: 10px;
+
+  --shadow-sm: 0 4px 12px rgba(15,23,42,.06);
+  --shadow-md: 0 14px 34px rgba(15,23,42,.12);
+
+  --focus: 0 0 0 3px rgba(14,165,233,.35);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: "IBM Plex Sans", Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 80% -100px, rgba(148,163,184,.25), transparent),
+    var(--bg);
+  color: var(--text);
+  padding: 24px;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+
+.app-container {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.card {
+  background: linear-gradient(180deg, #ffffff, #f9fafb);
+  border-radius: var(--radius);
+  padding: 22px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 24px;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 28px;
+}
+
+.logo {
+  height: 34px;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.subtitle {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* =========================
+   FORM
+========================= */
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border);
+}
+
+.card-title {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.card-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--muted);
+  margin-bottom: 6px;
+  display: block;
+  letter-spacing: .4px;
+}
+
+textarea,
+input,
+select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  font-size: 14px;
+}
+
+textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+textarea:focus,
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus);
+  background: #ffffff;
+}
+
+/* =========================
+   FILTER GRID
+========================= */
+
+.jd-filters {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+/* =========================
+   BUTTON
+========================= */
+
+.btn-primary {
+  margin-top: 16px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border: none;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 800;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 12px 26px rgba(14,165,233,.35);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #06b6d4, var(--primary));
+}
+
+/* =========================
+   PLACEHOLDER RESULTS
+========================= */
+
+.results-placeholder {
+  text-align: center;
+  background: linear-gradient(180deg, #f9fafb, #f3f4f6);
+  border: 1px dashed var(--border);
+}
+
+.results-placeholder h3 {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.results-placeholder p {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.candidate-card {
+  background: linear-gradient(180deg, #ffffff, #f9fafb);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.candidate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.fit-badge {
+  background: linear-gradient(90deg, var(--primary), #06b6d4);
+  color: white;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--text-soft);
+}
+
+.fit {
+  font-size: 13px;
+  background: var(--primary-soft);
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.btn-secondary {
+  margin-top: auto;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #f3f4f6;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+/* =========================
+   EXPERIENCE PRESETS
+========================= */
+
+.exp-presets {
+  margin-top: 16px;
+}
+
+.preset-group {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+
+.preset {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.preset:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.preset.active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(14,165,233,.35);
+}
+
+
+/* =========================
+   EXPERIENCE + CATEGORY ROW
+========================= */
+
+.exp-category-row {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 20px;
+  margin-top: 18px;
+  align-items: end;
+}
+
+.exp-block label,
+.category-block label {
+  margin-bottom: 8px;
+}
+
+.category-block select {
+  height: 44px;
+}
+
+/* Responsive fallback */
+@media (max-width: 900px) {
+  .exp-category-row {
+    grid-template-columns: 1fr;
+  }
+}
