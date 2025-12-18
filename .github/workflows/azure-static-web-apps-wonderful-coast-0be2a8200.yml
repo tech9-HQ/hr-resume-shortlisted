@@ -20,4 +20,5 @@ jobs:
           app_location: hr-ui
           output_location: dist
         env:
-          NODE_VERSION: 20.19.0
+          NODE_VERSION: 20.19.5
+
