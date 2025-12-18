@@ -1,4 +1,8 @@
 export default function ShortlistResults({ results, loading }) {
+  const API_BASE =
+    import.meta.env.VITE_API_BASE_URL ||
+    "http://127.0.0.1:8000";
+
   const top3 = [...results]
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
@@ -10,7 +14,7 @@ export default function ShortlistResults({ results, loading }) {
     }
 
     window.open(
-      `http://127.0.0.1:8000/resumes/${resumeId}/download`,
+      `${API_BASE}/resumes/${resumeId}/download`,
       "_blank"
     );
   };

@@ -1,4 +1,8 @@
-const API_BASE = "http://127.0.0.1:8000";
+// hr-ui/src/client.js
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://127.0.0.1:8000";
 
 export async function getStats() {
   const res = await fetch(`${API_BASE}/stats`);
@@ -6,7 +10,7 @@ export async function getStats() {
 }
 
 export async function shortlistResumes(payload) {
-  const res = await fetch("http://127.0.0.1:8000/shortlist", {
+  const res = await fetch(`${API_BASE}/shortlist`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -19,7 +23,6 @@ export async function shortlistResumes(payload) {
 
   return res.json();
 }
-
 
 export async function listResumes(limit = 20) {
   const res = await fetch(`${API_BASE}/resumes?limit=${limit}`);

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { shortlistResumes } from "../api/client";
 
 export default function JDForm({ onResults, setLoading }) {
   const [jd, setJd] = useState("");
@@ -22,24 +23,14 @@ export default function JDForm({ onResults, setLoading }) {
     setLoading(true);
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/shortlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jd_text: jd,
-          min_exp: min,
-          max_exp: max,
-          category,
-        }),
+      const data = await shortlistResumes({
+        jd,
+        minExp: min,
+        maxExp: max,
+        category,
       });
 
-      if (!res.ok) {
-        throw new Error("Shortlist API failed");
-      }
-
-      const data = await res.json();
-
-      // ✅ Normalize response (critical for download)
+      // Normalize response for download compatibility
       const normalized = data.map((c) => ({
         ...c,
         item_id: c.item_id ?? c.resume_id,
@@ -104,11 +95,7 @@ export default function JDForm({ onResults, setLoading }) {
         </div>
       </div>
 
-      <button
-        type="button"
-        className="btn-primary"
-        onClick={handleSubmit}
-      >
+      <button type="button" className="btn-primary" onClick={handleSubmit}>
         🔍 Shortlist Candidates
       </button>
     </div>
