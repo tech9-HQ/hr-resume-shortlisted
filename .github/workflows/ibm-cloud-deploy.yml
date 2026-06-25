@@ -96,7 +96,8 @@ jobs:
               --registry-secret icr-secret \
               --env OPENAI_API_KEY="$OPENAI_API_KEY" \
               --env CORS_ORIGINS="$CORS" \
-              --env DATABASE_URL="$DATABASE_URL"
+              --env DATABASE_URL="$DATABASE_URL" \
+              --wait=false
           else
             ibmcloud ce app create \
               --name hr-api \
@@ -109,8 +110,17 @@ jobs:
               --max-scale 2 \
               --port 8000 \
               --cpu 0.5 \
-              --memory 1G
+              --memory 1G \
+              --wait=false
           fi
+          # Poll until ready (max 3 minutes)
+          echo "Waiting for hr-api to become ready..."
+          for i in $(seq 1 18); do
+            STATUS=$(ibmcloud ce app get --name hr-api --output json 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); conds=d.get('status',{}).get('conditions',[]); ready=[c for c in conds if c.get('type')=='Ready']; print(ready[0].get('status','False') if ready else 'False')" 2>/dev/null || echo "False")
+            echo "  [$i/18] Ready=$STATUS"
+            [ "$STATUS" = "True" ] && break
+            sleep 10
+          done
 
       - name: Print backend URL
         run: |
@@ -130,7 +140,8 @@ jobs:
             ibmcloud ce app update \
               --name hr-ui \
               --image "$IMAGE" \
-              --registry-secret icr-secret
+              --registry-secret icr-secret \
+              --wait=false
           else
             ibmcloud ce app create \
               --name hr-ui \
@@ -140,7 +151,8 @@ jobs:
               --max-scale 2 \
               --port 80 \
               --cpu 0.25 \
-              --memory 0.5G
+              --memory 0.5G \
+              --wait=false
           fi
 
       - name: Print frontend URL
