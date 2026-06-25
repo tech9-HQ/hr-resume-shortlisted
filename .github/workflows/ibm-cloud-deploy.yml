@@ -1,0 +1,80 @@
+name: Deploy to IBM Cloud Code Engine
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  IBM_REGION: us-south
+  ICR_NAMESPACE: ${{ secrets.IBM_ICR_NAMESPACE }}
+  CE_PROJECT: hr-prescreening
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── IBM Cloud CLI ────────────────────────────────────────────────────
+      - name: Install IBM Cloud CLI and plugins
+        run: |
+          curl -fsSL https://clis.cloud.ibm.com/install/linux | sh
+          ibmcloud plugin install container-registry -f
+          ibmcloud plugin install code-engine -f
+
+      - name: Log in to IBM Cloud
+        run: |
+          ibmcloud login --apikey "${{ secrets.IBM_API_KEY }}" -r "${{ env.IBM_REGION }}" -g Default
+          ibmcloud cr login
+
+      # ── Build & push backend ─────────────────────────────────────────────
+      - name: Build and push backend image
+        run: |
+          docker build -f Dockerfile.backend \
+            -t icr.io/${{ env.ICR_NAMESPACE }}/hr-api:${{ github.sha }} \
+            -t icr.io/${{ env.ICR_NAMESPACE }}/hr-api:latest \
+            .
+          docker push icr.io/${{ env.ICR_NAMESPACE }}/hr-api:${{ github.sha }}
+          docker push icr.io/${{ env.ICR_NAMESPACE }}/hr-api:latest
+
+      # ── Build & push frontend ────────────────────────────────────────────
+      - name: Build and push frontend image
+        run: |
+          docker build -f hr-ui/Dockerfile \
+            --build-arg VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }} \
+            -t icr.io/${{ env.ICR_NAMESPACE }}/hr-ui:${{ github.sha }} \
+            -t icr.io/${{ env.ICR_NAMESPACE }}/hr-ui:latest \
+            ./hr-ui
+          docker push icr.io/${{ env.ICR_NAMESPACE }}/hr-ui:${{ github.sha }}
+          docker push icr.io/${{ env.ICR_NAMESPACE }}/hr-ui:latest
+
+      # ── Deploy to Code Engine ────────────────────────────────────────────
+      - name: Select Code Engine project
+        run: ibmcloud ce project select --name "${{ env.CE_PROJECT }}"
+
+      - name: Deploy backend
+        run: |
+          ibmcloud ce app update \
+            --name hr-api \
+            --image icr.io/${{ env.ICR_NAMESPACE }}/hr-api:${{ github.sha }} \
+            --env OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }} \
+            --env CORS_ORIGINS=${{ secrets.VITE_API_BASE_URL }} \
+            --env DB_PATH=/app/data/resumes.duckdb \
+            --min-scale 1 \
+            --max-scale 2 \
+            --port 8000 \
+            --cpu 0.5 \
+            --memory 1G
+
+      - name: Deploy frontend
+        run: |
+          ibmcloud ce app update \
+            --name hr-ui \
+            --image icr.io/${{ env.ICR_NAMESPACE }}/hr-ui:${{ github.sha }} \
+            --min-scale 1 \
+            --max-scale 2 \
+            --port 80 \
+            --cpu 0.25 \
+            --memory 0.5G

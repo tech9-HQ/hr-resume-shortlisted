@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
-import { getQuestions, evaluateAnswers } from "../api/client";
+import { getQuestions, evaluateAnswers, updateCandidate } from "../api/client";
+
+const CATEGORIES = ["Sales", "Pre-Sales", "Technical", "Admin", "Management", "Finance", "Others"];
 
 const TYPE_STYLE = {
   Introduction: { bg: "#fef3c7", color: "#b45309" },
@@ -45,6 +47,16 @@ export default function InterviewPortal({ candidate, session, onComplete, onBack
   const [loading, setLoading]     = useState(true);
   const [scoring, setScoring]     = useState(false);
   const [error, setError]         = useState("");
+  const [category, setCategory]   = useState(candidate.category || "");
+  const [experience, setExperience] = useState(candidate.experience ?? "");
+
+  const saveField = async (field, value) => {
+    try {
+      await updateCandidate(candidate.candidate_id, { [field]: value });
+    } catch {
+      // silent — not critical
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -99,19 +111,52 @@ export default function InterviewPortal({ candidate, session, onComplete, onBack
     <div>
       {/* Candidate header */}
       <div className="card" style={{ marginBottom: 16 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <h2 style={{ fontWeight: 900, fontSize: 18 }}>
-              {candidate.name}
-            </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+          <div style={{ flex: 1 }}>
+            <h2 style={{ fontWeight: 900, fontSize: 18 }}>{candidate.name}</h2>
             <p style={{ color: "var(--muted)", fontSize: 13, marginTop: 4 }}>
-              {candidate.email}{candidate.experience ? ` · ${candidate.experience} yrs` : ""}{candidate.category ? ` · ${candidate.category}` : ""}
+              {candidate.email}
             </p>
             <p style={{ fontSize: 13, color: "var(--text-soft)", marginTop: 4 }}>
               Position: <strong>{session.position_title}</strong>
             </p>
+
+            {/* Editable category + experience */}
+            <div className="form-two-col" style={{ marginTop: 14, maxWidth: 480 }}>
+              <div>
+                <label style={{ marginBottom: 5 }}>CATEGORY</label>
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    saveField("category", e.target.value);
+                  }}
+                  style={{ marginBottom: 0 }}
+                >
+                  <option value="">— Select —</option>
+                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ marginBottom: 5 }}>EXPERIENCE (YRS)</label>
+                <input
+                  type="number"
+                  min="0" max="60" step="0.5"
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                  onBlur={(e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val) && val >= 0) saveField("experience_years", val);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && e.target.blur()}
+                  placeholder="e.g. 5.5"
+                  style={{ marginBottom: 0 }}
+                />
+              </div>
+            </div>
           </div>
-          <button className="btn-secondary" style={{ marginTop: 0 }} onClick={onBack}>
+
+          <button className="btn-secondary" style={{ marginTop: 0, flexShrink: 0 }} onClick={onBack}>
             ← Back
           </button>
         </div>

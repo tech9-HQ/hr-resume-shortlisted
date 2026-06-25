@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+duckdb==1.4.0
+openai
+PyPDF2
+python-docx
+dateparser
+phonenumbers
+requests
+pydantic>=2.0
+lxml
+RapidFuzz

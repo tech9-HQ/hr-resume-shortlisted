@@ -62,9 +62,10 @@ GRAPH = "https://graph.microsoft.com/v1.0"
 # --------------------------------------------------
 app = FastAPI(title="Resume Intelligence Server")
 
+_cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

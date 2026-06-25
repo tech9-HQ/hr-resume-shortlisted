@@ -1,11 +1,13 @@
 # core/memory.py
 
 import json
+import os
 import duckdb
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "resumes.duckdb"
+_default_db = Path(__file__).resolve().parent.parent / "resumes.duckdb"
+DB_PATH = Path(os.getenv("DB_PATH", str(_default_db)))
 
 _conn = None
 
