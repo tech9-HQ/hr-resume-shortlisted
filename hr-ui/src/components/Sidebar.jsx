@@ -1,6 +1,6 @@
 import { supabase } from "../lib/supabase";
 
-const NAV_ITEMS = [
+const TOP_NAV = [
   {
     id: "dashboard",
     label: "Dashboard",
@@ -25,6 +25,9 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+];
+
+const BOTTOM_NAV = [
   {
     id: "settings",
     label: "Settings",
@@ -60,8 +63,9 @@ export default function Sidebar({ currentView, onNavigate, user }) {
 
   return (
     <aside className="sidebar">
+      {/* Top navigation */}
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map((item) => (
+        {TOP_NAV.map((item) => (
           <button
             key={item.id}
             className={`sidebar-item${isActive(item.id) ? " active" : ""}`}
@@ -74,13 +78,30 @@ export default function Sidebar({ currentView, onNavigate, user }) {
         ))}
       </nav>
 
-      <div className="sidebar-profile">
-        <div className="sidebar-avatar">{initials}</div>
-        <div className="sidebar-user-info">
-          <div className="sidebar-user-email" title={user?.email}>{user?.email}</div>
-          <button className="sidebar-logout" onClick={() => supabase.auth.signOut()}>
-            Sign out
+      {/* Bottom: Settings, Help, then profile */}
+      <div className="sidebar-bottom">
+        {BOTTOM_NAV.map((item) => (
+          <button
+            key={item.id}
+            className={`sidebar-item${isActive(item.id) ? " active" : ""}`}
+            onClick={() => onNavigate(item.id)}
+            title={item.label}
+          >
+            <span className="sidebar-icon">{item.icon}</span>
+            <span className="sidebar-label">{item.label}</span>
           </button>
+        ))}
+
+        <div className="sidebar-divider" />
+
+        <div className="sidebar-profile">
+          <div className="sidebar-avatar">{initials}</div>
+          <div className="sidebar-user-info">
+            <div className="sidebar-user-email" title={user?.email}>{user?.email}</div>
+            <button className="sidebar-logout" onClick={() => supabase.auth.signOut()}>
+              Sign out
+            </button>
+          </div>
         </div>
       </div>
     </aside>
