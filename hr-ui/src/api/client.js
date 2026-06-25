@@ -83,3 +83,19 @@ export async function getReport(candidateId, sessionId) {
   if (!res.ok) throw new Error("Report not found.");
   return res.json();
 }
+
+export async function updateCandidateStage(candidateId, stage) {
+  const res = await fetch(`${API_BASE}/candidates/${candidateId}/stage`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ stage }),
+  });
+  if (!res.ok) throw new Error("Failed to update stage.");
+  return res.json();
+}
+
+export async function getDashboardStats() {
+  const res = await fetch(`${API_BASE}/dashboard/stats`);
+  if (!res.ok) throw new Error("Failed to load dashboard stats.");
+  return res.json();
+}

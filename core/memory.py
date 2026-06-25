@@ -84,8 +84,14 @@ def _init_tables():
                 session_id TEXT,
                 candidate_id TEXT,
                 questions TEXT,
+                stage TEXT DEFAULT 'hr_prescreening',
                 created_at TIMESTAMP DEFAULT NOW()
             )
+        """)
+        # Add stage column to existing tables that were created without it
+        cur.execute("""
+            ALTER TABLE session_candidates
+            ADD COLUMN IF NOT EXISTS stage TEXT DEFAULT 'hr_prescreening'
         """)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS interview_results (
@@ -264,7 +270,8 @@ def list_all_sessions() -> list:
         """
         SELECT s.session_id, s.position_title, s.created_at,
                r.resume_id, r.name, r.email, r.experience_years, r.category,
-               ir.overall_score, ir.recommendation, ir.completed_at
+               ir.overall_score, ir.recommendation, ir.completed_at,
+               COALESCE(sc.stage, 'hr_prescreening')
         FROM sessions s
         JOIN session_candidates sc ON sc.session_id = s.session_id
         JOIN resumes r ON r.resume_id = sc.candidate_id
@@ -288,6 +295,7 @@ def list_all_sessions() -> list:
             "overall_score": r[8],
             "recommendation": r[9],
             "completed_at": r[10].isoformat() if r[10] else None,
+            "stage": r[11],
         }
         for r in (rows or [])
     ]
@@ -350,6 +358,101 @@ def list_resumes_db(limit: int = 50):
         [limit],
         fetch="all",
     ) or []
+
+
+def update_candidate_stage(candidate_id: str, stage: str):
+    _exec(
+        "UPDATE session_candidates SET stage = ? WHERE candidate_id = ?",
+        [stage, candidate_id],
+    )
+
+
+def get_dashboard_stats() -> dict:
+    with _db() as conn:
+        cur = conn.cursor()
+
+        # Total candidates
+        cur.execute("SELECT COUNT(*) FROM session_candidates")
+        total = cur.fetchone()[0]
+
+        # Completed (have interview results)
+        cur.execute("""
+            SELECT COUNT(*) FROM session_candidates sc
+            WHERE EXISTS (
+                SELECT 1 FROM interview_results ir
+                WHERE ir.candidate_id = sc.candidate_id AND ir.session_id = sc.session_id
+            )
+        """)
+        completed = cur.fetchone()[0]
+
+        # Average score
+        cur.execute("SELECT AVG(overall_score) FROM interview_results")
+        avg_score = cur.fetchone()[0]
+
+        # Pass rate (score >= 70)
+        cur.execute("SELECT COUNT(*) FROM interview_results WHERE overall_score >= 70")
+        passed = cur.fetchone()[0]
+
+        # By category
+        cur.execute("""
+            SELECT r.category, COUNT(*) FROM session_candidates sc
+            JOIN resumes r ON r.resume_id = sc.candidate_id
+            GROUP BY r.category ORDER BY COUNT(*) DESC
+        """)
+        by_category = [{"category": row[0] or "Others", "count": row[1]} for row in cur.fetchall()]
+
+        # By stage
+        cur.execute("""
+            SELECT COALESCE(stage, 'hr_prescreening'), COUNT(*)
+            FROM session_candidates GROUP BY stage ORDER BY COUNT(*) DESC
+        """)
+        by_stage = [{"stage": row[0], "count": row[1]} for row in cur.fetchall()]
+
+        # Score distribution
+        cur.execute("""
+            SELECT
+                SUM(CASE WHEN overall_score BETWEEN 0  AND 30  THEN 1 ELSE 0 END),
+                SUM(CASE WHEN overall_score BETWEEN 31 AND 50  THEN 1 ELSE 0 END),
+                SUM(CASE WHEN overall_score BETWEEN 51 AND 70  THEN 1 ELSE 0 END),
+                SUM(CASE WHEN overall_score BETWEEN 71 AND 100 THEN 1 ELSE 0 END)
+            FROM interview_results
+        """)
+        sd = cur.fetchone()
+        score_dist = [
+            {"range": "0-30",   "count": sd[0] or 0},
+            {"range": "31-50",  "count": sd[1] or 0},
+            {"range": "51-70",  "count": sd[2] or 0},
+            {"range": "71-100", "count": sd[3] or 0},
+        ]
+
+        # Recent 5 interviews
+        cur.execute("""
+            SELECT r.name, s.position_title, ir.overall_score, ir.recommendation, ir.completed_at
+            FROM interview_results ir
+            JOIN resumes r ON r.resume_id = ir.candidate_id
+            JOIN sessions s ON s.session_id = ir.session_id
+            ORDER BY ir.completed_at DESC LIMIT 5
+        """)
+        recent = [
+            {
+                "name": row[0], "position": row[1], "score": row[2],
+                "recommendation": row[3],
+                "completed_at": row[4].isoformat() if row[4] else None,
+            }
+            for row in cur.fetchall()
+        ]
+
+    return {
+        "total": total,
+        "completed": completed,
+        "pending": total - completed,
+        "avg_score": round(avg_score) if avg_score else 0,
+        "pass_rate": round((passed / completed) * 100) if completed else 0,
+        "by_category": by_category,
+        "by_stage": by_stage,
+        "score_distribution": score_dist,
+        "recent_interviews": recent,
+    }
 
 
 def get_resumes_for_shortlist(category: str, min_exp: float, max_exp: float):

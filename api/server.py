@@ -29,6 +29,8 @@ from core.memory import (
     list_all_sessions,
     delete_session as _delete_session,
     update_resume_fields,
+    update_candidate_stage,
+    get_dashboard_stats,
     fetch_resume,
     fetch_resume_summary,
     fetch_session,
@@ -116,6 +118,10 @@ class JDRequest(BaseModel):
 class EvaluateRequest(BaseModel):
     session_id: str
     answers: List[dict]
+
+
+class UpdateStageRequest(BaseModel):
+    stage: str
 
 
 # --------------------------------------------------
@@ -215,6 +221,20 @@ class UpdateCandidateRequest(BaseModel):
 def update_candidate(candidate_id: str, body: UpdateCandidateRequest):
     update_resume_fields(candidate_id, body.category, body.experience_years)
     return {"ok": True}
+
+
+@app.patch("/candidates/{candidate_id}/stage")
+def update_stage(candidate_id: str, body: UpdateStageRequest):
+    allowed = {"hr_prescreening", "technical_1", "technical_2", "management", "final_hr"}
+    if body.stage not in allowed:
+        raise HTTPException(400, f"Invalid stage. Must be one of: {', '.join(allowed)}")
+    update_candidate_stage(candidate_id, body.stage)
+    return {"ok": True}
+
+
+@app.get("/dashboard/stats")
+def dashboard_stats():
+    return get_dashboard_stats()
 
 
 # --------------------------------------------------

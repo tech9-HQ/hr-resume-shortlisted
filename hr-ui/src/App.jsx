@@ -1,28 +1,28 @@
 import { useState } from "react";
 import { getReport, fetchSession } from "./api/client";
 import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
+import Dashboard from "./components/Dashboard";
 import SessionHistory from "./components/SessionHistory";
 import NewInterview from "./components/NewInterview";
 import InterviewPortal from "./components/InterviewPortal";
 import ReportCard from "./components/ReportCard";
 import "./styles/theme.css";
 
-// view: "home" | "new-interview" | "interview" | "report"
+// view: "dashboard" | "home" | "new-interview" | "interview" | "report"
 
 export default function App() {
-  const [view, setView]                   = useState("home");
+  const [view, setView]                     = useState("dashboard");
   const [currentSession, setCurrentSession] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [interviewResult, setInterviewResult] = useState(null);
 
-  // ── New Interview form submitted ──────────────────────────────
   const handleSessionStarted = (session) => {
     setCurrentSession(session);
     setSelectedCandidate(session.candidate);
     setView("interview");
   };
 
-  // ── History: continue a pending interview ─────────────────────
   const handleContinue = async (historyRow) => {
     try {
       const session = await fetchSession(historyRow.session_id);
@@ -36,7 +36,6 @@ export default function App() {
     }
   };
 
-  // ── History: view a completed report ─────────────────────────
   const handleViewReport = async (historyRow) => {
     try {
       const report = await getReport(historyRow.candidate_id, historyRow.session_id);
@@ -55,49 +54,64 @@ export default function App() {
     }
   };
 
-  // ── Interview completed → show report ────────────────────────
   const handleInterviewComplete = (result) => {
     setInterviewResult(result);
     setView("report");
   };
 
+  const handleSidebarNavigate = (target) => {
+    // Prevent navigating away from mid-interview
+    if (view === "interview") return;
+    setView(target);
+  };
+
+  const showSidebar = !["interview", "report"].includes(view);
+
   return (
-    <div className="app-container">
-      <Header />
-
-      {view === "home" && (
-        <SessionHistory
-          onNewInterview={() => setView("new-interview")}
-          onContinue={handleContinue}
-          onViewReport={handleViewReport}
-        />
+    <div className="app-shell">
+      {showSidebar && (
+        <Sidebar currentView={view} onNavigate={handleSidebarNavigate} />
       )}
 
-      {view === "new-interview" && (
-        <NewInterview
-          onStarted={handleSessionStarted}
-          onCancel={() => setView("home")}
-        />
-      )}
+      <div className={`app-main${showSidebar ? "" : " app-main--full"}`}>
+        <Header />
 
-      {view === "interview" && selectedCandidate && currentSession && (
-        <InterviewPortal
-          candidate={selectedCandidate}
-          session={currentSession}
-          onComplete={handleInterviewComplete}
-          onBack={() => setView("home")}
-        />
-      )}
+        {view === "dashboard" && <Dashboard />}
 
-      {view === "report" && interviewResult && selectedCandidate && currentSession && (
-        <ReportCard
-          result={interviewResult}
-          candidate={selectedCandidate}
-          session={currentSession}
-          onBack={() => setView("home")}
-          onReInterview={() => setView("interview")}
-        />
-      )}
+        {view === "home" && (
+          <SessionHistory
+            onNewInterview={() => setView("new-interview")}
+            onContinue={handleContinue}
+            onViewReport={handleViewReport}
+          />
+        )}
+
+        {view === "new-interview" && (
+          <NewInterview
+            onStarted={handleSessionStarted}
+            onCancel={() => setView("home")}
+          />
+        )}
+
+        {view === "interview" && selectedCandidate && currentSession && (
+          <InterviewPortal
+            candidate={selectedCandidate}
+            session={currentSession}
+            onComplete={handleInterviewComplete}
+            onBack={() => setView("home")}
+          />
+        )}
+
+        {view === "report" && interviewResult && selectedCandidate && currentSession && (
+          <ReportCard
+            result={interviewResult}
+            candidate={selectedCandidate}
+            session={currentSession}
+            onBack={() => setView("home")}
+            onReInterview={() => setView("interview")}
+          />
+        )}
+      </div>
     </div>
   );
 }

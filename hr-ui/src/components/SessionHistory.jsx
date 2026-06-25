@@ -1,7 +1,28 @@
 import { useState, useEffect, useMemo } from "react";
-import { listSessions, deleteSession, updateCandidate } from "../api/client";
+import { listSessions, deleteSession, updateCandidate, updateCandidateStage } from "../api/client";
 
 const CATEGORIES = ["Sales", "Pre-Sales", "Technical", "Admin", "Management", "Finance", "Others"];
+
+const STAGES = [
+  { value: "hr_prescreening", label: "HR Pre-Screening", color: "#0ea5e9" },
+  { value: "technical_1",     label: "Technical 1",      color: "#7c3aed" },
+  { value: "technical_2",     label: "Technical 2",      color: "#6366f1" },
+  { value: "management",      label: "Management",       color: "#f59e0b" },
+  { value: "final_hr",        label: "Final HR Round",   color: "#16a34a" },
+];
+
+function StageBadge({ stage }) {
+  const s = STAGES.find((x) => x.value === stage) || STAGES[0];
+  return (
+    <span style={{
+      display: "inline-block", fontSize: 10, fontWeight: 800, padding: "3px 8px",
+      borderRadius: 999, background: s.color + "18", color: s.color,
+      border: `1px solid ${s.color}40`, whiteSpace: "nowrap",
+    }}>
+      {s.label}
+    </span>
+  );
+}
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -73,6 +94,12 @@ export default function SessionHistory({ onNewInterview, onContinue, onViewRepor
     setSessions((prev) => prev.map((x) => x.session_id === s.session_id ? { ...x, experience: val } : x));
     try { await updateCandidate(s.candidate_id, { experience_years: val }); }
     catch (e) { alert("Save failed: " + e.message); }
+  };
+
+  const handleStageChange = async (s, stage) => {
+    setSessions((prev) => prev.map((x) => x.session_id === s.session_id ? { ...x, stage } : x));
+    try { await updateCandidateStage(s.candidate_id, stage); }
+    catch (e) { alert("Stage save failed: " + e.message); }
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -154,12 +181,13 @@ export default function SessionHistory({ onNewInterview, onContinue, onViewRepor
               <tr>
                 <th>Candidate</th>
                 <th>Position</th>
-                <th style={{ width: 160 }}>Category</th>
-                <th style={{ width: 110 }}>Experience (yrs)</th>
-                <th style={{ width: 110 }}>Date</th>
-                <th style={{ width: 80 }}>Score</th>
-                <th style={{ width: 130 }}></th>
-                <th style={{ width: 40 }}></th>
+                <th style={{ width: 155 }}>Category</th>
+                <th style={{ width: 95 }}>Exp (yrs)</th>
+                <th style={{ width: 160 }}>Stage</th>
+                <th style={{ width: 95 }}>Date</th>
+                <th style={{ width: 70 }}>Score</th>
+                <th style={{ width: 120 }}></th>
+                <th style={{ width: 36 }}></th>
               </tr>
             </thead>
             <tbody>
@@ -203,6 +231,24 @@ export default function SessionHistory({ onNewInterview, onContinue, onViewRepor
                         style={{ width: 72, fontSize: 13, padding: "5px 8px", borderRadius: 8, marginBottom: 0 }}
                         placeholder="yrs"
                       />
+                    </td>
+
+                    {/* Stage */}
+                    <td>
+                      <select
+                        value={s.stage || "hr_prescreening"}
+                        onChange={(e) => handleStageChange(s, e.target.value)}
+                        style={{
+                          width: "100%", fontSize: 11, padding: "4px 6px",
+                          borderRadius: 8, marginBottom: 0,
+                          color: STAGES.find((x) => x.value === (s.stage || "hr_prescreening"))?.color,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {STAGES.map((st) => (
+                          <option key={st.value} value={st.value}>{st.label}</option>
+                        ))}
+                      </select>
                     </td>
 
                     {/* Date */}
