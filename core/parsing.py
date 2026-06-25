@@ -142,34 +142,49 @@ def extract_contacts(text: str) -> Tuple[List[str], List[str]]:
 
 def extract_name(text: str, emails: List[str]) -> str:
     """
-    Ultra-strict name extractor:
-    - Look only at the first ~12 non-empty lines
-    - Skip lines that look like:
-      * addresses, roles, durations, profiles, resumes, etc.
-      * contain email/phone/contact symbols
-    - Accept only lines that:
-      * have 1–4 words
-      * all words start with uppercase (proper name style)
-    - If nothing passes → fallback to email username (if available)
+    Multi-pass name extractor:
+    1. Explicit 'Name: ...' label anywhere in the text.
+    2. Heuristic scan of the first 15 non-empty lines.
+       - ALL-CAPS 1-3 word lines that aren't section headers → title-cased name
+         (handles Indian résumé style: "PRIYA SHARMA", "RAJ KUMAR")
+       - Title-case 1-4 word lines that pass keyword filters → name
+    3. Derive from email username.
     """
     BAD_STARTS = (
         "of", "duration", "role", "address", "profile", "curriculum",
         "objective", "summary", "experience", "responsibilities", "company",
-        "skills", "career", "professional", "work", "employment"
+        "skills", "career", "professional", "work", "employment",
+        "technical", "education", "personal", "contact", "about",
+        "project", "certification", "language", "reference", "achievement",
+        "interest", "activity", "hobby", "declaration", "overview",
+        "bachelor", "master", "mba", "b.tech", "m.tech",
     )
 
     BAD_KEYWORDS = (
         "delhi", "nagar", "india", "road", "sector", "floor",
-        "street", "lane", "repute", "till date", "till", "date"
+        "street", "lane", "repute", "till date", "till", "date",
+        "linkedin", "github", "portfolio", "years", "yrs", "|", "/",
     )
 
+    # Pass 1 — explicit "Name: ..." or "Full Name: ..." label
+    label_match = re.search(
+        r"(?:full\s+)?name\s*[:\-]\s*([A-Za-z][A-Za-z\s\-']{1,40})",
+        text or "",
+        re.I,
+    )
+    if label_match:
+        candidate = label_match.group(1).strip()
+        words = candidate.split()
+        if 1 <= len(words) <= 4 and all(re.match(r"[A-Za-z\-']", w) for w in words):
+            return candidate.title() if candidate.isupper() else candidate
+
+    # Pass 2 — heuristic line scan
     lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
     candidates: List[str] = []
 
-    for line in lines[:12]:
+    for line in lines[:15]:
         low = line.lower()
 
-        # Skip obvious non-name lines
         if any(low.startswith(b) for b in BAD_STARTS):
             continue
         if any(k in low for k in BAD_KEYWORDS):
@@ -177,7 +192,6 @@ def extract_name(text: str, emails: List[str]) -> str:
         if any(x in low for x in ["@", "email", "e-mail", "phone", "mobile", "contact"]):
             continue
 
-        # Remove non-letter characters
         cleaned = re.sub(r"[^A-Za-z\s\-']", " ", line).strip()
         cleaned = re.sub(r"\s{2,}", " ", cleaned)
         if not cleaned:
@@ -185,11 +199,17 @@ def extract_name(text: str, emails: List[str]) -> str:
 
         words = cleaned.split()
 
-        # Only accept 1–4 word lines
         if not (1 <= len(words) <= 4):
             continue
 
-        # All words should start with uppercase (likely proper name)
+        # ALL-CAPS line with 1–3 words: likely a name ("PRIYA SHARMA"), not a long
+        # section header ("WORK EXPERIENCE" already blocked by BAD_STARTS above).
+        if all(w.isupper() for w in words if len(w) > 1):
+            if len(words) <= 3:
+                candidates.append(cleaned.title())
+            continue
+
+        # Title-case check — every word starts uppercase
         if not all(w[0].isupper() for w in words if w):
             continue
 
@@ -198,13 +218,12 @@ def extract_name(text: str, emails: List[str]) -> str:
     if candidates:
         return candidates[0]
 
-    # Fallback: derive from email
+    # Pass 3 — derive from email username
     if emails:
         local = emails[0].split("@")[0]
         local = re.sub(r"[._\d]+", " ", local).strip()
         return local.title()
 
-    # If no decent candidate and no email → return empty, not garbage
     return ""
 
 # ============================================================

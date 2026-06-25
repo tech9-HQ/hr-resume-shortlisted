@@ -1,54 +1,85 @@
 // hr-ui/src/api/client.js
 
-// ✅ API base must come ONLY from env (no localhost fallback)
 export const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 if (!API_BASE) {
-  throw new Error(
-    "❌ VITE_API_BASE_URL is not defined. Check Azure Static Web App environment variables."
-  );
+  throw new Error("VITE_API_BASE_URL is not defined. Set it in hr-ui/.env.local");
 }
 
-// ------------------ API FUNCTIONS ------------------
+// ---------- Single-candidate interview setup ----------
 
-export async function getStats() {
-  const res = await fetch(`${API_BASE}/stats`);
+export async function startInterview(candidateName, position, jdText, resumeFile) {
+  const form = new FormData();
+  form.append("candidate_name", candidateName);
+  form.append("position", position);
+  form.append("jd_text", jdText);
+  form.append("resume", resumeFile);
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch stats");
-  }
-
+  const res = await fetch(`${API_BASE}/sessions/start`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(`Failed to start interview: ${await res.text()}`);
   return res.json();
 }
 
-export async function shortlistResumes(payload) {
-  const res = await fetch(`${API_BASE}/shortlist`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      jd_text: payload.jd,
-      min_exp: payload.minExp,
-      max_exp: payload.maxExp,
-      category: payload.category,
-    }),
+export async function listSessions() {
+  const res = await fetch(`${API_BASE}/sessions`);
+  if (!res.ok) throw new Error("Failed to load session history.");
+  return res.json();
+}
+
+export async function deleteSession(sessionId) {
+  const res = await fetch(`${API_BASE}/sessions/${sessionId}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete session.");
+  return res.json();
+}
+
+export async function updateCandidate(candidateId, fields) {
+  const res = await fetch(`${API_BASE}/candidates/${candidateId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(fields),
   });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Shortlist failed: ${text}`);
-  }
-
+  if (!res.ok) throw new Error("Failed to update candidate.");
   return res.json();
 }
 
-export async function listResumes(limit = 20) {
-  const res = await fetch(`${API_BASE}/resumes?limit=${limit}`);
+// ---------- Session (bulk upload — legacy) ----------
 
-  if (!res.ok) {
-    throw new Error("Failed to list resumes");
-  }
+export async function uploadSession(jdText, files) {
+  const form = new FormData();
+  form.append("jd_text", jdText);
+  for (const f of files) form.append("resumes", f);
 
+  const res = await fetch(`${API_BASE}/sessions/upload`, { method: "POST", body: form });
+  if (!res.ok) throw new Error(`Upload failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function fetchSession(sessionId) {
+  const res = await fetch(`${API_BASE}/sessions/${sessionId}`);
+  if (!res.ok) throw new Error("Failed to load session.");
+  return res.json();
+}
+
+// ---------- Interview ----------
+
+export async function getQuestions(candidateId, sessionId) {
+  const res = await fetch(`${API_BASE}/candidates/${candidateId}/questions?session_id=${sessionId}`);
+  if (!res.ok) throw new Error(`Failed to load questions: ${await res.text()}`);
+  return res.json();
+}
+
+export async function evaluateAnswers(candidateId, sessionId, answers) {
+  const res = await fetch(`${API_BASE}/candidates/${candidateId}/evaluate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: sessionId, answers }),
+  });
+  if (!res.ok) throw new Error(`Evaluation failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function getReport(candidateId, sessionId) {
+  const res = await fetch(`${API_BASE}/candidates/${candidateId}/report?session_id=${sessionId}`);
+  if (!res.ok) throw new Error("Report not found.");
   return res.json();
 }
