@@ -14,6 +14,7 @@ env:
   ICR_NAMESPACE: ${{ secrets.IBM_ICR_NAMESPACE }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+  CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
 
 jobs:
   build-and-deploy:
@@ -84,7 +85,7 @@ jobs:
 
       - name: Deploy backend (create or update)
         run: |
-          CORS="${VITE_API_BASE_URL:-*}"
+          CORS="${CORS_ORIGINS:-*}"
           IMAGE="$ICR_DOMAIN/$ICR_NAMESPACE/hr-api:${{ github.sha }}"
 
           if ibmcloud ce app get --name hr-api > /dev/null 2>&1; then
