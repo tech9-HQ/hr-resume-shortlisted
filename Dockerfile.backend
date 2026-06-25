@@ -12,9 +12,6 @@ COPY api ./api
 COPY core ./core
 COPY ingestion ./ingestion
 
-# Data directory for DuckDB (mount a persistent volume here in production)
-RUN mkdir -p /app/data
-
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

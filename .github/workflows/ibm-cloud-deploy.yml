@@ -15,6 +15,7 @@ env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
   CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 jobs:
   build-and-deploy:
@@ -95,7 +96,7 @@ jobs:
               --registry-secret icr-secret \
               --env OPENAI_API_KEY="$OPENAI_API_KEY" \
               --env CORS_ORIGINS="$CORS" \
-              --env DB_PATH=/app/data/resumes.duckdb
+              --env DATABASE_URL="$DATABASE_URL"
           else
             ibmcloud ce app create \
               --name hr-api \
@@ -103,7 +104,7 @@ jobs:
               --registry-secret icr-secret \
               --env OPENAI_API_KEY="$OPENAI_API_KEY" \
               --env CORS_ORIGINS="$CORS" \
-              --env DB_PATH=/app/data/resumes.duckdb \
+              --env DATABASE_URL="$DATABASE_URL" \
               --min-scale 1 \
               --max-scale 2 \
               --port 8000 \

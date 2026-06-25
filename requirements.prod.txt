@@ -2,7 +2,7 @@ fastapi
 uvicorn[standard]
 python-multipart
 python-dotenv
-duckdb==1.4.0
+psycopg2-binary
 openai
 PyPDF2
 python-docx

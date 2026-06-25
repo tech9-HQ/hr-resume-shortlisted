@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 from ingestion.onedrive_watcher import run_once
 from ingestion.auth import get_app_token
 from core.memory import (
-    get_conn,
     insert_resume,
     create_session,
     add_session_candidate,
@@ -30,6 +29,12 @@ from core.memory import (
     list_all_sessions,
     delete_session as _delete_session,
     update_resume_fields,
+    fetch_resume,
+    fetch_resume_summary,
+    fetch_session,
+    fetch_session_title,
+    list_resumes_db,
+    get_resumes_for_shortlist,
 )
 from core.scoring import score_resume_with_llm
 from core.interview import generate_interview_questions, score_interview_answers, ALLOWED_TYPES
@@ -300,27 +305,15 @@ def get_candidate_questions(candidate_id: str, session_id: str):
     if cached and all(q.get("type") in ALLOWED_TYPES for q in cached):
         questions = cached
     else:
-        conn = get_conn()
-        candidate = conn.execute(
-            "SELECT name, email, experience_years, category, raw_text FROM resumes WHERE resume_id = ?",
-            [candidate_id],
-        ).fetchone()
-        session = conn.execute(
-            "SELECT jd_text, position_title FROM sessions WHERE session_id = ?",
-            [session_id],
-        ).fetchone()
+        candidate = fetch_resume(candidate_id)
+        session = fetch_session(session_id)
         if not candidate or not session:
             raise HTTPException(404, "Candidate or session not found.")
 
         questions = generate_interview_questions(candidate[4], session[0], session[1])
         save_questions(session_id, candidate_id, questions)
 
-    conn = get_conn()
-    c = conn.execute(
-        "SELECT name, email, experience_years, category, skills FROM resumes WHERE resume_id = ?",
-        [candidate_id],
-    ).fetchone()
-
+    c = fetch_resume_summary(candidate_id)
     return {
         "questions": questions,
         "candidate": {
@@ -339,16 +332,8 @@ def get_candidate_questions(candidate_id: str, session_id: str):
 # --------------------------------------------------
 @app.post("/candidates/{candidate_id}/evaluate")
 def evaluate_candidate(candidate_id: str, body: EvaluateRequest):
-    conn = get_conn()
-
-    candidate = conn.execute(
-        "SELECT name, email, experience_years, category, raw_text FROM resumes WHERE resume_id = ?",
-        [candidate_id],
-    ).fetchone()
-    session = conn.execute(
-        "SELECT jd_text, position_title FROM sessions WHERE session_id = ?",
-        [body.session_id],
-    ).fetchone()
+    candidate = fetch_resume(candidate_id)
+    session = fetch_session(body.session_id)
 
     if not candidate or not session:
         raise HTTPException(404, "Candidate or session not found.")
@@ -376,16 +361,8 @@ def evaluate_candidate(candidate_id: str, body: EvaluateRequest):
 # --------------------------------------------------
 @app.get("/candidates/{candidate_id}/report")
 def get_report(candidate_id: str, session_id: str):
-    conn = get_conn()
-
-    candidate = conn.execute(
-        "SELECT name, email, experience_years, category, skills FROM resumes WHERE resume_id = ?",
-        [candidate_id],
-    ).fetchone()
-    session = conn.execute(
-        "SELECT position_title FROM sessions WHERE session_id = ?",
-        [session_id],
-    ).fetchone()
+    candidate = fetch_resume_summary(candidate_id)
+    session = fetch_session_title(session_id)
 
     if not candidate or not session:
         raise HTTPException(404, "Not found.")
@@ -413,11 +390,7 @@ def get_report(candidate_id: str, session_id: str):
 # --------------------------------------------------
 @app.get("/resumes")
 def list_resumes(limit: int = 50):
-    conn = get_conn()
-    rows = conn.execute(
-        "SELECT resume_id, name, email, category, experience_years, skills FROM resumes ORDER BY created_at DESC LIMIT ?",
-        [limit],
-    ).fetchall()
+    rows = list_resumes_db(limit)
     return [
         {"resume_id": r[0], "name": r[1], "email": r[2], "category": r[3], "experience": r[4], "skills": r[5]}
         for r in rows
@@ -426,15 +399,7 @@ def list_resumes(limit: int = 50):
 
 @app.post("/shortlist")
 def shortlist(req: JDRequest):
-    conn = get_conn()
-    rows = conn.execute(
-        """
-        SELECT resume_id, drive_id, item_id, name, email, experience_years, skills, raw_text
-        FROM resumes
-        WHERE category = ? AND experience_years BETWEEN ? AND ?
-        """,
-        [req.category, req.min_exp, req.max_exp],
-    ).fetchall()
+    rows = get_resumes_for_shortlist(req.category, req.min_exp, req.max_exp)
 
     results = []
     for r in rows:
