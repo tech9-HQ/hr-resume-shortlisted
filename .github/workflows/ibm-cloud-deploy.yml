@@ -6,8 +6,10 @@ on:
       - main
 
 env:
-  IBM_REGION: us-south
+  IBM_REGION: jp-tok
+  ICR_DOMAIN: jp.icr.io
   CE_PROJECT: hr-prescreening
+  RESOURCE_GROUP: hr_applications
   # Expose secrets as env vars so they're usable in `if:` conditions
   ICR_NAMESPACE: ${{ secrets.IBM_ICR_NAMESPACE }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -30,30 +32,34 @@ jobs:
 
       - name: Log in to IBM Cloud
         run: |
-          ibmcloud login --apikey "${{ secrets.IBM_API_KEY }}" -r "${{ env.IBM_REGION }}" -g Default
+          ibmcloud login \
+            --apikey "${{ secrets.IBM_API_KEY }}" \
+            -r "$IBM_REGION" \
+            -g "$RESOURCE_GROUP"
+          ibmcloud cr region-set "$IBM_REGION"
           ibmcloud cr login
 
       # ── Build & push backend ─────────────────────────────────────────────
       - name: Build and push backend image
         run: |
           docker build -f Dockerfile.backend \
-            -t icr.io/$ICR_NAMESPACE/hr-api:${{ github.sha }} \
-            -t icr.io/$ICR_NAMESPACE/hr-api:latest \
+            -t $ICR_DOMAIN/$ICR_NAMESPACE/hr-api:${{ github.sha }} \
+            -t $ICR_DOMAIN/$ICR_NAMESPACE/hr-api:latest \
             .
-          docker push icr.io/$ICR_NAMESPACE/hr-api:${{ github.sha }}
-          docker push icr.io/$ICR_NAMESPACE/hr-api:latest
+          docker push $ICR_DOMAIN/$ICR_NAMESPACE/hr-api:${{ github.sha }}
+          docker push $ICR_DOMAIN/$ICR_NAMESPACE/hr-api:latest
 
       # ── Build & push frontend (only once VITE_API_BASE_URL secret is set) ─
       - name: Build and push frontend image
         if: env.VITE_API_BASE_URL != ''
         run: |
           docker build -f hr-ui/Dockerfile \
-            --build-arg VITE_API_BASE_URL=$VITE_API_BASE_URL \
-            -t icr.io/$ICR_NAMESPACE/hr-ui:${{ github.sha }} \
-            -t icr.io/$ICR_NAMESPACE/hr-ui:latest \
+            --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" \
+            -t $ICR_DOMAIN/$ICR_NAMESPACE/hr-ui:${{ github.sha }} \
+            -t $ICR_DOMAIN/$ICR_NAMESPACE/hr-ui:latest \
             ./hr-ui
-          docker push icr.io/$ICR_NAMESPACE/hr-ui:${{ github.sha }}
-          docker push icr.io/$ICR_NAMESPACE/hr-ui:latest
+          docker push $ICR_DOMAIN/$ICR_NAMESPACE/hr-ui:${{ github.sha }}
+          docker push $ICR_DOMAIN/$ICR_NAMESPACE/hr-ui:latest
 
       # ── Deploy to Code Engine ────────────────────────────────────────────
       - name: Select Code Engine project
@@ -62,18 +68,19 @@ jobs:
       - name: Deploy backend (create or update)
         run: |
           CORS="${VITE_API_BASE_URL:-*}"
+          IMAGE="$ICR_DOMAIN/$ICR_NAMESPACE/hr-api:${{ github.sha }}"
 
           if ibmcloud ce app get --name hr-api > /dev/null 2>&1; then
             ibmcloud ce app update \
               --name hr-api \
-              --image icr.io/$ICR_NAMESPACE/hr-api:${{ github.sha }} \
+              --image "$IMAGE" \
               --env OPENAI_API_KEY="$OPENAI_API_KEY" \
               --env CORS_ORIGINS="$CORS" \
               --env DB_PATH=/app/data/resumes.duckdb
           else
             ibmcloud ce app create \
               --name hr-api \
-              --image icr.io/$ICR_NAMESPACE/hr-api:${{ github.sha }} \
+              --image "$IMAGE" \
               --env OPENAI_API_KEY="$OPENAI_API_KEY" \
               --env CORS_ORIGINS="$CORS" \
               --env DB_PATH=/app/data/resumes.duckdb \
@@ -90,19 +97,22 @@ jobs:
           echo "======================================================"
           echo "  BACKEND URL — copy this as VITE_API_BASE_URL secret"
           echo "======================================================"
-          ibmcloud ce app get --name hr-api --output json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',{}).get('url','(not found yet)'))"
+          ibmcloud ce app get --name hr-api --output json \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',{}).get('url','(check Code Engine console)'))"
 
       - name: Deploy frontend (create or update)
         if: env.VITE_API_BASE_URL != ''
         run: |
+          IMAGE="$ICR_DOMAIN/$ICR_NAMESPACE/hr-ui:${{ github.sha }}"
+
           if ibmcloud ce app get --name hr-ui > /dev/null 2>&1; then
             ibmcloud ce app update \
               --name hr-ui \
-              --image icr.io/$ICR_NAMESPACE/hr-ui:${{ github.sha }}
+              --image "$IMAGE"
           else
             ibmcloud ce app create \
               --name hr-ui \
-              --image icr.io/$ICR_NAMESPACE/hr-ui:${{ github.sha }} \
+              --image "$IMAGE" \
               --min-scale 1 \
               --max-scale 2 \
               --port 80 \
@@ -117,4 +127,5 @@ jobs:
           echo "======================================================"
           echo "  FRONTEND URL"
           echo "======================================================"
-          ibmcloud ce app get --name hr-ui --output json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',{}).get('url','(not found yet)'))"
+          ibmcloud ce app get --name hr-ui --output json \
+            | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('status',{}).get('url','(check Code Engine console)'))"
