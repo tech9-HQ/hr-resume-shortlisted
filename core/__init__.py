@@ -9,5 +9,5 @@ from .parsing import (
 )
 
 from .categorization import categorize_resume
-from .memory import get_conn, insert_resume, resume_exists
+from .memory import insert_resume, resume_exists
 from .scoring import score_resume_with_llm
