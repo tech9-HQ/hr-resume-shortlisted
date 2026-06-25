@@ -1,5 +1,46 @@
 import { useSettings } from "../context/SettingsContext";
 
+const FEATURES = [
+  {
+    icon: "📄",
+    title: "Resume Parsing",
+    desc: "Upload any PDF or DOCX resume. The system automatically extracts name, contact info, skills, years of experience, and categorises the candidate.",
+  },
+  {
+    icon: "🤖",
+    title: "AI Interview Questions",
+    desc: "GPT-4 reads the resume and job description together, then generates tailored questions across 5 types: Introduction, Background, Technical, Behavioral, and Logistics.",
+  },
+  {
+    icon: "⭐",
+    title: "Answer Scoring",
+    desc: "Rate each answer 1–5 stars during the interview. The AI evaluates all answers in context and produces an overall score from 0–100 with a Hire / Maybe / No recommendation.",
+  },
+  {
+    icon: "📊",
+    title: "Interview Report",
+    desc: "A full PDF-ready report is generated after every interview — summary, strengths, concerns, per-question feedback, and an overall recommendation.",
+  },
+  {
+    icon: "🔄",
+    title: "Pipeline Tracking",
+    desc: "Move candidates through configurable hiring stages (HR Pre-Screening → Technical 1 → Management → Final HR Round) or mark as Rejected at any point.",
+  },
+  {
+    icon: "📈",
+    title: "Dashboard Analytics",
+    desc: "Real-time charts show hiring pipeline health, score distribution, category breakdown, and recent interview activity across your whole team.",
+  },
+];
+
+const WORKFLOW = [
+  { label: "Upload Resume",     icon: "📤", desc: "PDF or DOCX" },
+  { label: "AI Generates Qs",  icon: "🤖", desc: "Tailored to JD" },
+  { label: "Conduct Interview", icon: "🎤", desc: "Rate & note answers" },
+  { label: "Get AI Report",     icon: "📋", desc: "Score + recommendation" },
+  { label: "Track Pipeline",    icon: "🔄", desc: "Move through stages" },
+];
+
 function Section({ title, children }) {
   return (
     <div className="help-section">
@@ -38,12 +79,88 @@ export default function Help() {
     <div className="help-page">
 
       <div className="help-hero">
-        <h1 className="help-title">Quick Reference Guide</h1>
+        <h1 className="help-title">Pre Screening Assistant — User Guide</h1>
         <p className="help-sub">Everything you need to use the Pre Screening Assistant effectively.</p>
       </div>
 
+      {/* ── What is this tool ─────────────────────────────────────────────── */}
+      <Section title="What is Pre Screening Assistant?">
+        <p className="help-overview-text">
+          Pre Screening Assistant is an AI-powered HR tool built by <strong>Tech9Labs</strong> that
+          helps your team run structured, consistent pre-screening interviews at scale. Instead of
+          spending hours crafting interview questions and writing up notes, the tool reads a
+          candidate's resume and the job description, auto-generates relevant questions, guides the
+          interviewer through the session, and produces a scored report — all in under 10 minutes.
+        </p>
+        <p className="help-overview-text" style={{ marginTop: 10 }}>
+          All interview data is stored centrally, so every HR manager on your team sees the same
+          candidate records, pipeline stages, and reports in real time.
+        </p>
+
+        {/* Workflow strip */}
+        <div className="help-workflow">
+          {WORKFLOW.map((step, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 0 }}>
+              <div className="help-workflow-step">
+                <div className="help-workflow-icon">{step.icon}</div>
+                <div className="help-workflow-label">{step.label}</div>
+                <div className="help-workflow-desc">{step.desc}</div>
+              </div>
+              {i < WORKFLOW.length - 1 && (
+                <div className="help-workflow-arrow">›</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── Key Features ─────────────────────────────────────────────────── */}
+      <Section title="Key Features">
+        <div className="help-features-grid">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="help-feature-card">
+              <div className="help-feature-icon">{f.icon}</div>
+              <div className="help-feature-title">{f.title}</div>
+              <div className="help-feature-desc">{f.desc}</div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* ── Who is it for ────────────────────────────────────────────────── */}
+      <Section title="Who is this tool for?">
+        <div className="help-roles">
+          <div className="help-role-card">
+            <div className="help-role-title">👩‍💼 HR Managers</div>
+            <ul className="help-role-list">
+              <li>Start and conduct AI-assisted pre-screening interviews</li>
+              <li>View scores and recommendations before deciding next steps</li>
+              <li>Move candidates through the hiring pipeline stages</li>
+              <li>Reject candidates at any stage without losing their record</li>
+            </ul>
+          </div>
+          <div className="help-role-card">
+            <div className="help-role-title">🔍 Talent Acquisition</div>
+            <ul className="help-role-list">
+              <li>Filter candidates by category, score, or pipeline stage</li>
+              <li>Compare interview reports across candidates for the same role</li>
+              <li>Use the Dashboard to track overall hiring funnel health</li>
+              <li>Download or print reports to share with hiring managers</li>
+            </ul>
+          </div>
+          <div className="help-role-card">
+            <div className="help-role-title">⚙️ Admins</div>
+            <ul className="help-role-list">
+              <li>Customise pipeline stage names and colours in Settings</li>
+              <li>Manage candidate categories for your organisation</li>
+              <li>Add or remove team members via Supabase Authentication</li>
+            </ul>
+          </div>
+        </div>
+      </Section>
+
       {/* ── Getting Started ───────────────────────────────────────────────── */}
-      <Section title="Getting Started">
+      <Section title="Step-by-Step: Running Your First Interview">
         <Step n="1" title="Start a New Interview">
           Click <strong>Interviews</strong> in the sidebar, then <strong>+ New Interview</strong>.
           Enter the candidate name, position title, job description, and upload their resume (PDF or DOCX).
