@@ -101,11 +101,11 @@ export default function App() {
   return (
     <div className="app-shell">
       {showSidebar && (
-        <Sidebar currentView={view} onNavigate={handleSidebarNavigate} />
+        <Sidebar currentView={view} onNavigate={handleSidebarNavigate} user={user} />
       )}
 
       <div className={`app-main${showSidebar ? "" : " app-main--full"}`}>
-        <Header user={user} />
+        <Header />
 
         {view === "dashboard" && <Dashboard />}
 

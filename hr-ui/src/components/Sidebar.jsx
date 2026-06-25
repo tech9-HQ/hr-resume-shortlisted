@@ -1,3 +1,5 @@
+import { supabase } from "../lib/supabase";
+
 const NAV_ITEMS = [
   {
     id: "dashboard",
@@ -25,11 +27,15 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function Sidebar({ currentView, onNavigate }) {
+export default function Sidebar({ currentView, onNavigate, user }) {
   const isActive = (id) =>
     id === "home"
       ? ["home", "new-interview", "interview", "report"].includes(currentView)
       : currentView === id;
+
+  const initials = user?.email
+    ? user.email.slice(0, 2).toUpperCase()
+    : "??";
 
   return (
     <aside className="sidebar">
@@ -46,6 +52,20 @@ export default function Sidebar({ currentView, onNavigate }) {
           </button>
         ))}
       </nav>
+
+      {/* User profile at bottom */}
+      <div className="sidebar-profile">
+        <div className="sidebar-avatar">{initials}</div>
+        <div className="sidebar-user-info">
+          <div className="sidebar-user-email" title={user?.email}>{user?.email}</div>
+          <button
+            className="sidebar-logout"
+            onClick={() => supabase.auth.signOut()}
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
     </aside>
   );
 }
