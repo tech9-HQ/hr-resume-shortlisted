@@ -65,6 +65,23 @@ jobs:
       - name: Select Code Engine project
         run: ibmcloud ce project select --name "$CE_PROJECT"
 
+      # Create (or update) a registry secret so Code Engine can pull images from ICR
+      - name: Create or update ICR registry secret
+        run: |
+          if ibmcloud ce registry get --name icr-secret > /dev/null 2>&1; then
+            ibmcloud ce registry update \
+              --name icr-secret \
+              --server "$ICR_DOMAIN" \
+              --username iamapikey \
+              --password "${{ secrets.IBM_API_KEY }}"
+          else
+            ibmcloud ce registry create \
+              --name icr-secret \
+              --server "$ICR_DOMAIN" \
+              --username iamapikey \
+              --password "${{ secrets.IBM_API_KEY }}"
+          fi
+
       - name: Deploy backend (create or update)
         run: |
           CORS="${VITE_API_BASE_URL:-*}"
@@ -74,6 +91,7 @@ jobs:
             ibmcloud ce app update \
               --name hr-api \
               --image "$IMAGE" \
+              --registry-secret icr-secret \
               --env OPENAI_API_KEY="$OPENAI_API_KEY" \
               --env CORS_ORIGINS="$CORS" \
               --env DB_PATH=/app/data/resumes.duckdb
@@ -81,6 +99,7 @@ jobs:
             ibmcloud ce app create \
               --name hr-api \
               --image "$IMAGE" \
+              --registry-secret icr-secret \
               --env OPENAI_API_KEY="$OPENAI_API_KEY" \
               --env CORS_ORIGINS="$CORS" \
               --env DB_PATH=/app/data/resumes.duckdb \
@@ -108,11 +127,13 @@ jobs:
           if ibmcloud ce app get --name hr-ui > /dev/null 2>&1; then
             ibmcloud ce app update \
               --name hr-ui \
-              --image "$IMAGE"
+              --image "$IMAGE" \
+              --registry-secret icr-secret
           else
             ibmcloud ce app create \
               --name hr-ui \
               --image "$IMAGE" \
+              --registry-secret icr-secret \
               --min-scale 1 \
               --max-scale 2 \
               --port 80 \
