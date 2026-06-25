@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "./lib/supabase";
 import { getReport, fetchSession } from "./api/client";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
+import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import SessionHistory from "./components/SessionHistory";
 import NewInterview from "./components/NewInterview";
@@ -12,11 +14,40 @@ import "./styles/theme.css";
 // view: "dashboard" | "home" | "new-interview" | "interview" | "report"
 
 export default function App() {
+  const [user, setUser]                     = useState(undefined); // undefined = loading
   const [view, setView]                     = useState("dashboard");
   const [currentSession, setCurrentSession] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [interviewResult, setInterviewResult] = useState(null);
 
+  // ── Auth listener ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (user === undefined) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-spinner" />
+      </div>
+    );
+  }
+
+  // ── Not logged in ─────────────────────────────────────────────────────────
+  if (user === null) {
+    return <Login />;
+  }
+
+  // ── App handlers ──────────────────────────────────────────────────────────
   const handleSessionStarted = (session) => {
     setCurrentSession(session);
     setSelectedCandidate(session.candidate);
@@ -60,13 +91,13 @@ export default function App() {
   };
 
   const handleSidebarNavigate = (target) => {
-    // Prevent navigating away from mid-interview
     if (view === "interview") return;
     setView(target);
   };
 
   const showSidebar = !["interview", "report"].includes(view);
 
+  // ── Authenticated app ─────────────────────────────────────────────────────
   return (
     <div className="app-shell">
       {showSidebar && (
@@ -74,7 +105,7 @@ export default function App() {
       )}
 
       <div className={`app-main${showSidebar ? "" : " app-main--full"}`}>
-        <Header />
+        <Header user={user} />
 
         {view === "dashboard" && <Dashboard />}
 
