@@ -1,28 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { listSessions, deleteSession, updateCandidate, updateCandidateStage } from "../api/client";
-
-const CATEGORIES = ["Sales", "Pre-Sales", "Technical", "Admin", "Management", "Finance", "Others"];
-
-const STAGES = [
-  { value: "hr_prescreening", label: "HR Pre-Screening", color: "#0ea5e9" },
-  { value: "technical_1",     label: "Technical 1",      color: "#7c3aed" },
-  { value: "technical_2",     label: "Technical 2",      color: "#6366f1" },
-  { value: "management",      label: "Management",       color: "#f59e0b" },
-  { value: "final_hr",        label: "Final HR Round",   color: "#16a34a" },
-];
-
-function StageBadge({ stage }) {
-  const s = STAGES.find((x) => x.value === stage) || STAGES[0];
-  return (
-    <span style={{
-      display: "inline-block", fontSize: 10, fontWeight: 800, padding: "3px 8px",
-      borderRadius: 999, background: s.color + "18", color: s.color,
-      border: `1px solid ${s.color}40`, whiteSpace: "nowrap",
-    }}>
-      {s.label}
-    </span>
-  );
-}
+import { useSettings } from "../context/SettingsContext";
 
 function formatDate(iso) {
   if (!iso) return "—";
@@ -43,12 +21,17 @@ function StatCard({ label, value, accent }) {
 }
 
 export default function SessionHistory({ onNewInterview, onContinue, onViewReport }) {
+  const { settings } = useSettings();
+  const STAGES     = settings.stages;
+  const CATEGORIES = settings.categories;
+
   const [sessions, setSessions]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
   const [search, setSearch]         = useState("");
   const [filterCat, setFilterCat]   = useState("All");
   const [filterStatus, setFilterStatus] = useState("All");
+  const [filterStage, setFilterStage]   = useState("All");
 
   useEffect(() => {
     listSessions()
@@ -68,8 +51,9 @@ export default function SessionHistory({ onNewInterview, onContinue, onViewRepor
     const nameHit   = !search.trim() || (s.candidate_name || "").toLowerCase().includes(search.toLowerCase().trim());
     const catHit    = filterCat    === "All" || s.category === filterCat;
     const statusHit = filterStatus === "All" || s.status   === filterStatus;
-    return nameHit && catHit && statusHit;
-  }), [sessions, search, filterCat, filterStatus]);
+    const stageHit  = filterStage  === "All" || (s.stage || "hr_prescreening") === filterStage;
+    return nameHit && catHit && statusHit && stageHit;
+  }), [sessions, search, filterCat, filterStatus, filterStage]);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleDelete = async (sessionId) => {
@@ -135,11 +119,21 @@ export default function SessionHistory({ onNewInterview, onContinue, onViewRepor
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            style={{ width: 140, marginBottom: 0 }}
+            style={{ width: 130, marginBottom: 0 }}
           >
             <option value="All">All Status</option>
             <option value="interviewed">Completed</option>
             <option value="pending">Pending</option>
+          </select>
+          <select
+            value={filterStage}
+            onChange={(e) => setFilterStage(e.target.value)}
+            style={{ width: 150, marginBottom: 0 }}
+          >
+            <option value="All">All Stages</option>
+            {STAGES.map((st) => (
+              <option key={st.value} value={st.value}>{st.label}</option>
+            ))}
           </select>
           <button
             className="btn-primary"
@@ -192,9 +186,11 @@ export default function SessionHistory({ onNewInterview, onContinue, onViewRepor
             </thead>
             <tbody>
               {filtered.map((s) => {
-                const scoreColor = s.overall_score >= 70 ? "#16a34a" : s.overall_score >= 45 ? "#ca8a04" : "#dc2626";
+                const scoreColor  = s.overall_score >= 70 ? "#16a34a" : s.overall_score >= 45 ? "#ca8a04" : "#dc2626";
+                const isRejected  = (s.stage || "hr_prescreening") === "rejected";
+                const stageObj    = STAGES.find((x) => x.value === (s.stage || "hr_prescreening")) || STAGES[0];
                 return (
-                  <tr key={s.session_id} className="history-row">
+                  <tr key={s.session_id} className={`history-row${isRejected ? " row-rejected" : ""}`}>
 
                     {/* Candidate */}
                     <td>
@@ -241,13 +237,15 @@ export default function SessionHistory({ onNewInterview, onContinue, onViewRepor
                         style={{
                           width: "100%", fontSize: 11, padding: "4px 6px",
                           borderRadius: 8, marginBottom: 0,
-                          color: STAGES.find((x) => x.value === (s.stage || "hr_prescreening"))?.color,
-                          fontWeight: 700,
+                          color: stageObj.color, fontWeight: 700,
                         }}
                       >
-                        {STAGES.map((st) => (
+                        {STAGES.filter((st) => st.value !== "rejected").map((st) => (
                           <option key={st.value} value={st.value}>{st.label}</option>
                         ))}
+                        <optgroup label="──────────">
+                          <option value="rejected" style={{ color: "#dc2626" }}>✕ Reject</option>
+                        </optgroup>
                       </select>
                     </td>
 

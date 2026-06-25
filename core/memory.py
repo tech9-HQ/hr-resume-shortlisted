@@ -94,6 +94,13 @@ def _init_tables():
             ADD COLUMN IF NOT EXISTS stage TEXT DEFAULT 'hr_prescreening'
         """)
         cur.execute("""
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS interview_results (
                 result_id TEXT PRIMARY KEY,
                 candidate_id TEXT,
@@ -453,6 +460,44 @@ def get_dashboard_stats() -> dict:
         "score_distribution": score_dist,
         "recent_interviews": recent,
     }
+
+
+DEFAULT_SETTINGS = {
+    "stages": [
+        {"value": "hr_prescreening", "label": "HR Pre-Screening", "color": "#0ea5e9"},
+        {"value": "technical_1",     "label": "Technical 1",      "color": "#7c3aed"},
+        {"value": "technical_2",     "label": "Technical 2",      "color": "#6366f1"},
+        {"value": "management",      "label": "Management",       "color": "#f59e0b"},
+        {"value": "final_hr",        "label": "Final HR Round",   "color": "#16a34a"},
+        {"value": "rejected",        "label": "Rejected",         "color": "#dc2626"},
+    ],
+    "categories": ["Sales", "Pre-Sales", "Technical", "Admin", "Management", "Finance", "Others"],
+}
+
+
+def get_app_settings() -> dict:
+    row = _exec("SELECT value FROM app_settings WHERE key = 'config'", fetch="one")
+    if row and row[0]:
+        saved = json.loads(row[0])
+        # Ensure rejected stage always exists
+        values = [s["value"] for s in saved.get("stages", [])]
+        if "rejected" not in values:
+            saved.setdefault("stages", []).append(
+                {"value": "rejected", "label": "Rejected", "color": "#dc2626"}
+            )
+        return saved
+    return DEFAULT_SETTINGS
+
+
+def save_app_settings(settings: dict):
+    _exec(
+        """
+        INSERT INTO app_settings (key, value, updated_at)
+        VALUES ('config', ?, NOW())
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+        """,
+        [json.dumps(settings)],
+    )
 
 
 def get_resumes_for_shortlist(category: str, min_exp: float, max_exp: float):

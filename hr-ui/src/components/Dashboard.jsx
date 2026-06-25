@@ -1,27 +1,10 @@
 import { useState, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell,
 } from "recharts";
 import { getDashboardStats } from "../api/client";
-
-const STAGE_LABELS = {
-  hr_prescreening: "HR Pre-Screening",
-  technical_1:     "Technical 1",
-  technical_2:     "Technical 2",
-  management:      "Management",
-  final_hr:        "Final HR Round",
-};
-
-const STAGE_COLORS = {
-  hr_prescreening: "#0ea5e9",
-  technical_1:     "#7c3aed",
-  technical_2:     "#6366f1",
-  management:      "#f59e0b",
-  final_hr:        "#16a34a",
-};
-
-const ALL_STAGES = ["hr_prescreening", "technical_1", "technical_2", "management", "final_hr"];
+import { useSettings } from "../context/SettingsContext";
 
 const CAT_COLORS = ["#0ea5e9", "#7c3aed", "#16a34a", "#f59e0b", "#ef4444", "#6366f1", "#ec4899"];
 
@@ -42,12 +25,13 @@ function SectionTitle({ children }) {
 }
 
 // Pipeline funnel — ordered stage bars
-function PipelineFunnel({ byStage }) {
+function PipelineFunnel({ byStage, stages }) {
   const stageMap = Object.fromEntries(byStage.map((s) => [s.stage, s.count]));
-  const data = ALL_STAGES.map((s) => ({
-    name: STAGE_LABELS[s],
-    count: stageMap[s] || 0,
-    fill: STAGE_COLORS[s],
+  const pipelineStages = stages.filter((s) => s.value !== "rejected");
+  const data = pipelineStages.map((s) => ({
+    name: s.label,
+    count: stageMap[s.value] || 0,
+    fill: s.color,
   }));
 
   return (
@@ -147,6 +131,7 @@ function RecentRow({ item }) {
 }
 
 export default function Dashboard() {
+  const { settings } = useSettings();
   const [stats, setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState("");
@@ -178,7 +163,7 @@ export default function Dashboard() {
       <div className="dash-row-2">
         <div className="card dash-chart-card">
           <SectionTitle>Hiring Pipeline</SectionTitle>
-          <PipelineFunnel byStage={stats.by_stage} />
+          <PipelineFunnel byStage={stats.by_stage} stages={settings.stages} />
         </div>
         <div className="card dash-chart-card">
           <SectionTitle>Score Distribution</SectionTitle>

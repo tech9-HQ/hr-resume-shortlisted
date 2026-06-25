@@ -31,6 +31,8 @@ from core.memory import (
     update_resume_fields,
     update_candidate_stage,
     get_dashboard_stats,
+    get_app_settings,
+    save_app_settings,
     fetch_resume,
     fetch_resume_summary,
     fetch_session,
@@ -235,6 +237,17 @@ def update_stage(candidate_id: str, body: UpdateStageRequest):
 @app.get("/dashboard/stats")
 def dashboard_stats():
     return get_dashboard_stats()
+
+
+@app.get("/settings")
+def get_settings():
+    return get_app_settings()
+
+
+@app.put("/settings")
+def put_settings(body: dict):
+    save_app_settings(body)
+    return {"ok": True}
 
 
 # --------------------------------------------------

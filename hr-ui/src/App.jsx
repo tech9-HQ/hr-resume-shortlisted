@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "./lib/supabase";
+import { SettingsProvider } from "./context/SettingsContext";
 import { getReport, fetchSession } from "./api/client";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
@@ -9,45 +10,18 @@ import SessionHistory from "./components/SessionHistory";
 import NewInterview from "./components/NewInterview";
 import InterviewPortal from "./components/InterviewPortal";
 import ReportCard from "./components/ReportCard";
+import Settings from "./components/Settings";
+import Help from "./components/Help";
 import "./styles/theme.css";
 
-// view: "dashboard" | "home" | "new-interview" | "interview" | "report"
+// view: "dashboard" | "home" | "new-interview" | "interview" | "report" | "settings" | "help"
 
-export default function App() {
-  const [user, setUser]                     = useState(undefined); // undefined = loading
+function AuthedApp({ user }) {
   const [view, setView]                     = useState("dashboard");
   const [currentSession, setCurrentSession] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [interviewResult, setInterviewResult] = useState(null);
 
-  // ── Auth listener ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // ── Loading state ─────────────────────────────────────────────────────────
-  if (user === undefined) {
-    return (
-      <div className="auth-loading">
-        <div className="auth-spinner" />
-      </div>
-    );
-  }
-
-  // ── Not logged in ─────────────────────────────────────────────────────────
-  if (user === null) {
-    return <Login />;
-  }
-
-  // ── App handlers ──────────────────────────────────────────────────────────
   const handleSessionStarted = (session) => {
     setCurrentSession(session);
     setSelectedCandidate(session.candidate);
@@ -97,17 +71,17 @@ export default function App() {
 
   const showSidebar = !["interview", "report"].includes(view);
 
-  // ── Authenticated app ─────────────────────────────────────────────────────
   return (
     <div className="app-shell">
       {showSidebar && (
         <Sidebar currentView={view} onNavigate={handleSidebarNavigate} user={user} />
       )}
-
       <div className={`app-main${showSidebar ? "" : " app-main--full"}`}>
         <Header />
 
-        {view === "dashboard" && <Dashboard />}
+        {view === "dashboard"    && <Dashboard />}
+        {view === "settings"     && <Settings />}
+        {view === "help"         && <Help />}
 
         {view === "home" && (
           <SessionHistory
@@ -116,14 +90,12 @@ export default function App() {
             onViewReport={handleViewReport}
           />
         )}
-
         {view === "new-interview" && (
           <NewInterview
             onStarted={handleSessionStarted}
             onCancel={() => setView("home")}
           />
         )}
-
         {view === "interview" && selectedCandidate && currentSession && (
           <InterviewPortal
             candidate={selectedCandidate}
@@ -132,7 +104,6 @@ export default function App() {
             onBack={() => setView("home")}
           />
         )}
-
         {view === "report" && interviewResult && selectedCandidate && currentSession && (
           <ReportCard
             result={interviewResult}
@@ -144,5 +115,35 @@ export default function App() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  const [user, setUser] = useState(undefined);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (user === undefined) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-spinner" />
+      </div>
+    );
+  }
+
+  if (user === null) return <Login />;
+
+  return (
+    <SettingsProvider>
+      <AuthedApp user={user} />
+    </SettingsProvider>
   );
 }

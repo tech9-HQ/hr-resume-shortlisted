@@ -99,3 +99,19 @@ export async function getDashboardStats() {
   if (!res.ok) throw new Error("Failed to load dashboard stats.");
   return res.json();
 }
+
+export async function getSettings() {
+  const res = await fetch(`${API_BASE}/settings`);
+  if (!res.ok) throw new Error("Failed to load settings.");
+  return res.json();
+}
+
+export async function saveSettings(settings) {
+  const res = await fetch(`${API_BASE}/settings`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw new Error("Failed to save settings.");
+  return res.json();
+}
