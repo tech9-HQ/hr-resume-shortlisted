@@ -10,9 +10,8 @@ from core.interview import (
     generate_interview_questions,
     score_interview_answers,
     PRESCREENING_QUESTIONS,
+    MANDATORY_TYPES,
 )
-
-VALID_TYPES = {"Introduction", "Background", "Behavioral", "Compensation", "Logistics"}
 
 
 # ---------------------------------------------------------------------------
@@ -25,10 +24,7 @@ def test_prescreening_has_8_questions():
 
 def test_prescreening_covers_all_required_types():
     types = {q["type"] for q in PRESCREENING_QUESTIONS}
-    assert "Introduction" in types
-    assert "Compensation" in types
-    assert "Logistics" in types
-    assert "Behavioral" in types
+    assert MANDATORY_TYPES.issubset(types)
 
 
 def test_prescreening_questions_have_required_keys():
@@ -41,10 +37,12 @@ def test_prescreening_questions_have_required_keys():
 # ---------------------------------------------------------------------------
 
 def _mock_ai_questions(n=8):
-    """Build a mock OpenAI client that returns n valid pre-screening questions."""
+    """Build a mock OpenAI client that returns n valid pre-screening questions with dynamic types."""
     import json
-    types = ["Introduction", "Background", "Background", "Behavioral", "Behavioral",
-             "Compensation", "Logistics", "Behavioral"]
+    # Mandatory types first, then profile-specific dynamic types
+    types = ["Introduction", "Compensation", "Logistics",
+             "Quota & Targets", "Client Acquisition", "Sales Methodology",
+             "Pipeline Management", "Career Motivation"]
     fake_qs = [
         {"question": f"Personalised question {i}?", "type": types[i % len(types)], "focus_area": f"Area {i}"}
         for i in range(n)
@@ -69,11 +67,11 @@ def test_generate_questions_have_required_keys_on_success():
         assert "question" in q and "type" in q and "focus_area" in q
 
 
-def test_generate_questions_types_are_valid_on_success():
+def test_generate_questions_mandatory_types_present_on_success():
     with patch("core.interview._get_client", return_value=_mock_ai_questions()):
         qs = generate_interview_questions("resume", "jd", "HR Role")
-    for q in qs:
-        assert q["type"] in VALID_TYPES, f"Unexpected type: {q['type']}"
+    present_types = {q["type"] for q in qs}
+    assert MANDATORY_TYPES.issubset(present_types), f"Missing mandatory types in: {present_types}"
 
 
 # ---------------------------------------------------------------------------

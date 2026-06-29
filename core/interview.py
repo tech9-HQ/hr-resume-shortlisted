@@ -18,6 +18,8 @@ def _get_client() -> OpenAI:
     return _client
 
 
+MANDATORY_TYPES = {"Introduction", "Compensation", "Logistics"}
+
 PRESCREENING_QUESTIONS = [
     {
         "question": "Please introduce yourself and walk us through your professional background.",
@@ -26,23 +28,23 @@ PRESCREENING_QUESTIONS = [
     },
     {
         "question": "What is your current role and what are your key day-to-day responsibilities?",
-        "type": "Background",
+        "type": "Role Experience",
         "focus_area": "Current Role",
     },
     {
         "question": "Walk us through your key achievements and notable projects from your previous roles.",
-        "type": "Background",
+        "type": "Achievements",
         "focus_area": "Previous Work",
     },
     {
         "question": "Why are you looking to move from your current company? What is driving this change?",
-        "type": "Behavioral",
-        "focus_area": "Motivation",
+        "type": "Career Motivation",
+        "focus_area": "Reason for Change",
     },
     {
         "question": "Tell me about a challenging situation you faced at work and how you handled it.",
-        "type": "Behavioral",
-        "focus_area": "Problem Solving",
+        "type": "Problem Solving",
+        "focus_area": "Work Challenges",
     },
     {
         "question": "What is your current CTC (fixed + variable)? What is your expected CTC for this role?",
@@ -56,26 +58,29 @@ PRESCREENING_QUESTIONS = [
     },
     {
         "question": "Where do you see yourself in the next 2–3 years, and how does this role fit into that plan?",
-        "type": "Behavioral",
-        "focus_area": "Career Goals",
+        "type": "Career Goals",
+        "focus_area": "Growth & Ambition",
     },
 ]
 
-
-ALLOWED_TYPES = {"Introduction", "Background", "Behavioral", "Compensation", "Logistics"}
+# Kept for backward-compat with cached questions from the old type system
+_LEGACY_TYPES = {"Introduction", "Background", "Behavioral", "Compensation", "Logistics"}
 
 
 def _valid_questions(data: object) -> bool:
-    """Return True only if data is exactly 8 well-formed questions with allowed types."""
+    """Return True if data is 8 well-formed questions and contains all 3 mandatory types."""
     if not isinstance(data, list) or len(data) != 8:
         return False
-    return all(
+    if not all(
         isinstance(q, dict)
         and isinstance(q.get("question"), str) and q["question"].strip()
-        and q.get("type") in ALLOWED_TYPES
+        and isinstance(q.get("type"), str) and q["type"].strip()
         and isinstance(q.get("focus_area"), str) and q["focus_area"].strip()
         for q in data
-    )
+    ):
+        return False
+    present = {q["type"] for q in data}
+    return MANDATORY_TYPES.issubset(present)
 
 
 def generate_interview_questions(
@@ -83,35 +88,49 @@ def generate_interview_questions(
 ) -> list[dict]:
     """
     Generate 8 personalised HR pre-screening questions using the candidate's
-    resume and the JD. Falls back to the generic template if AI is unavailable
-    or returns questions with wrong types.
+    resume and the JD. Question category types are chosen dynamically by the AI
+    based on the detected role profile (Sales, Pre-Sales, Solutioning, Technical, etc.).
+    Falls back to the generic template if AI is unavailable.
     """
     system = (
-        "You are an HR recruiter doing an initial phone pre-screening — NOT a technical interview.\n"
-        "Generate exactly 8 pre-screening questions personalised to this specific candidate.\n\n"
-        "MANDATORY QUESTION TYPES — use ONLY these five values for the 'type' field:\n"
-        '  "Introduction"  — one question: ask the candidate to introduce themselves\n'
-        '  "Compensation"  — one question: ask for current CTC (fixed + variable) AND expected CTC\n'
-        '  "Logistics"     — one question: ask about notice period and early-joining possibility\n'
-        '  "Background"    — personalised questions about their specific past roles/companies/achievements\n'
-        '  "Behavioral"    — questions about motivation, work style, challenges, career goals\n\n'
-        "FORBIDDEN types — NEVER use these: Technical, Situational, Skill, Domain, Other.\n"
-        "FORBIDDEN content — do NOT ask deep technical or architecture questions. HR cannot evaluate these.\n\n"
-        "OUTPUT FORMAT — respond ONLY with a raw JSON array, no markdown fences, no explanation:\n"
-        '[{"question": "...", "type": "Introduction|Background|Behavioral|Compensation|Logistics", "focus_area": "3-5 word label"}, ...]\n\n'
-        "Exactly 8 elements. Exactly 1 Introduction, 1 Compensation, 1 Logistics. Rest are Background/Behavioral."
+        "You are an experienced HR recruiter conducting an initial phone pre-screening call — NOT a technical interview.\n\n"
+        "STEP 1 — Identify the role profile from the JD and resume. Common profiles include:\n"
+        "  Sales, Pre-Sales / Solutions Consultant, Solutioning / Solution Architect,\n"
+        "  Technical / Engineering, Product Management, Marketing, Operations,\n"
+        "  Finance, HR, Management / Leadership, Customer Success, and others.\n\n"
+        "STEP 2 — Generate exactly 8 pre-screening questions personalised to THIS candidate.\n\n"
+        "THREE MANDATORY QUESTIONS (must appear exactly once each):\n"
+        '  type "Introduction"  — ask the candidate to introduce themselves and walk through their background\n'
+        '  type "Compensation"  — ask for current CTC (fixed + variable) AND expected CTC for this role\n'
+        '  type "Logistics"     — ask about notice period and possibility of early joining\n\n'
+        "FIVE PROFILE-SPECIFIC QUESTIONS — for the remaining 5 questions:\n"
+        "  • Invent concise, descriptive type names (2–4 words) that reflect what each question probes.\n"
+        "  • Types should be specific to the role profile. Examples by profile:\n"
+        "      Sales:           'Quota & Targets', 'Client Acquisition', 'Sales Methodology', 'Pipeline Management', 'Deal Closure'\n"
+        "      Pre-Sales:       'Demo Experience', 'Technical Discovery', 'POC & Pilots', 'RFP / Solutioning', 'Customer Objections'\n"
+        "      Solutioning:     'Solution Design', 'Client Requirements', 'Architecture Decisions', 'Delivery Experience', 'Stakeholder Management'\n"
+        "      Technical:       'Project Delivery', 'Engineering Culture', 'Technical Leadership', 'Cross-team Collaboration', 'Tech Stack Experience'\n"
+        "      Product Mgmt:    'Product Ownership', 'Roadmap Prioritization', 'Stakeholder Alignment', 'Metrics & KPIs', 'User Research'\n"
+        "      Management:      'Team Leadership', 'P&L Ownership', 'Hiring & Performance', 'Conflict Resolution', 'Strategic Planning'\n"
+        "      Customer Success:'Onboarding Experience', 'Escalation Handling', 'Renewal & Expansion', 'Client Health', 'Cross-sell / Upsell'\n"
+        "  • Reference specifics from the resume: company names, role titles, numbers, technologies, products.\n"
+        "  • Reference requirements from the JD: skills sought, industry, team context.\n"
+        "  • Keep all questions at an HR level — no deep technical architecture or code questions.\n\n"
+        "OUTPUT FORMAT — respond ONLY with a raw JSON array (no markdown fences, no explanation):\n"
+        '[{"question": "...", "type": "short profile-specific type", "focus_area": "3-5 word label"}, ...]\n'
+        "Exactly 8 elements. Questions must feel like a natural conversation, not an interrogation."
     )
     user = (
         f"POSITION APPLIED FOR: {position}\n\n"
         f"JOB DESCRIPTION:\n{jd_text[:2500]}\n\n"
         f"CANDIDATE RESUME:\n{resume_text[:4000]}\n\n"
-        "Generate 8 personalised HR pre-screening questions. Remember: HR types only, no technical questions."
+        "Generate 8 personalised pre-screening questions for this specific candidate and role."
     )
 
     try:
         resp = _get_client().chat.completions.create(
             model=MODEL,
-            temperature=0.5,
+            temperature=0.6,
             messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
         )
         content = (resp.choices[0].message.content or "[]").strip()

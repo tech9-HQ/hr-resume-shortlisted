@@ -41,7 +41,7 @@ from core.memory import (
     get_resumes_for_shortlist,
 )
 from core.scoring import score_resume_with_llm
-from core.interview import generate_interview_questions, score_interview_answers, ALLOWED_TYPES
+from core.interview import generate_interview_questions, score_interview_answers, MANDATORY_TYPES
 from core.parsing import (
     extract_text_from_bytes,
     extract_contacts,
@@ -334,8 +334,9 @@ def get_session(session_id: str):
 @app.get("/candidates/{candidate_id}/questions")
 def get_candidate_questions(candidate_id: str, session_id: str):
     cached = get_questions(session_id, candidate_id)
-    # Discard cache if it contains questions from the old type system
-    if cached and all(q.get("type") in ALLOWED_TYPES for q in cached):
+    # Accept cache only if it has all 3 mandatory question types (dynamic type system)
+    cached_types = {q.get("type") for q in cached} if cached else set()
+    if cached and MANDATORY_TYPES.issubset(cached_types):
         questions = cached
     else:
         candidate = fetch_resume(candidate_id)

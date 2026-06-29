@@ -75,13 +75,13 @@ Education: MBA from Mumbai University
 
 MOCK_QUESTIONS = [
     {"question": "Please introduce yourself and walk us through your professional background.", "type": "Introduction", "focus_area": "Communication"},
-    {"question": "What is your current role and what are your key day-to-day responsibilities?", "type": "Background", "focus_area": "Current Role"},
-    {"question": "Walk us through your key achievements and notable projects from your previous roles.", "type": "Background", "focus_area": "Previous Work"},
-    {"question": "Why are you looking to move from your current company? What is driving this change?", "type": "Behavioral", "focus_area": "Motivation"},
-    {"question": "Tell me about a challenging situation you faced at work and how you handled it.", "type": "Behavioral", "focus_area": "Problem Solving"},
+    {"question": "What is your current role and what are your key day-to-day responsibilities?", "type": "Role Experience", "focus_area": "Current Role"},
+    {"question": "Walk us through your key achievements and notable projects from your previous roles.", "type": "Quota & Targets", "focus_area": "Previous Work"},
+    {"question": "Why are you looking to move from your current company? What is driving this change?", "type": "Career Motivation", "focus_area": "Reason for Change"},
+    {"question": "Tell me about a challenging situation you faced at work and how you handled it.", "type": "Client Acquisition", "focus_area": "Problem Solving"},
     {"question": "What is your current CTC (fixed + variable)? What is your expected CTC for this role?", "type": "Compensation", "focus_area": "Current vs Expected CTC"},
     {"question": "What is your current notice period? Is there any possibility of an early release if required?", "type": "Logistics", "focus_area": "Notice Period & Joining"},
-    {"question": "Where do you see yourself in the next 2-3 years, and how does this role fit into that plan?", "type": "Behavioral", "focus_area": "Career Goals"},
+    {"question": "Where do you see yourself in the next 2-3 years, and how does this role fit into that plan?", "type": "Sales Methodology", "focus_area": "Growth & Ambition"},
 ]
 
 MOCK_SCORE_RESULT = {

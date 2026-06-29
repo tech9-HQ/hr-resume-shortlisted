@@ -3,13 +3,30 @@ import { getQuestions, evaluateAnswers, updateCandidate } from "../api/client";
 
 const CATEGORIES = ["Sales", "Pre-Sales", "Technical", "Admin", "Management", "Finance", "Others"];
 
-const TYPE_STYLE = {
+// Fixed colors for the 3 mandatory HR types
+const FIXED_TYPE_STYLE = {
   Introduction: { bg: "#fef3c7", color: "#b45309" },
-  Background:   { bg: "#dbeafe", color: "#1d4ed8" },
-  Behavioral:   { bg: "#f3e8ff", color: "#7c3aed" },
   Compensation: { bg: "#dcfce7", color: "#16a34a" },
   Logistics:    { bg: "#f1f5f9", color: "#475569" },
 };
+
+// Color palette rotated for profile-specific dynamic types
+const DYNAMIC_PALETTE = [
+  { bg: "#dbeafe", color: "#1d4ed8" },   // blue
+  { bg: "#f3e8ff", color: "#7c3aed" },   // purple
+  { bg: "#ffedd5", color: "#c2410c" },   // orange
+  { bg: "#fce7f3", color: "#be185d" },   // pink
+  { bg: "#ecfdf5", color: "#059669" },   // emerald
+  { bg: "#e0f2fe", color: "#0369a1" },   // sky
+  { bg: "#fef9c3", color: "#854d0e" },   // yellow
+  { bg: "#f0fdf4", color: "#166534" },   // light green
+];
+
+function getTypeStyle(type, dynamicTypeList) {
+  if (FIXED_TYPE_STYLE[type]) return FIXED_TYPE_STYLE[type];
+  const idx = dynamicTypeList.indexOf(type);
+  return DYNAMIC_PALETTE[Math.max(0, idx) % DYNAMIC_PALETTE.length];
+}
 
 function StarRating({ value, onChange }) {
   const [hovered, setHovered] = useState(0);
@@ -96,6 +113,11 @@ export default function InterviewPortal({ candidate, session, onComplete, onBack
     }
   };
 
+  // Build ordered list of dynamic types (non-mandatory) for stable color assignment
+  const dynamicTypeList = [...new Set(
+    questions.map((q) => q.type).filter((t) => !FIXED_TYPE_STYLE[t])
+  )];
+
   if (loading) {
     return (
       <div className="card" style={{ textAlign: "center", padding: 48 }}>
@@ -169,7 +191,7 @@ export default function InterviewPortal({ candidate, session, onComplete, onBack
 
       {/* Questions */}
       {questions.map((q, i) => {
-        const ts = TYPE_STYLE[q.type] || { bg: "#f3f4f6", color: "var(--text)" };
+        const ts = getTypeStyle(q.type, dynamicTypeList);
         const resp = responses[i] || { notes: "", stars: 0 };
         return (
           <div key={i} className="card question-card">
